@@ -37,12 +37,26 @@ public class ClienteHandler implements Runnable {
             outputStream = new ObjectOutputStream(socketCliente.getOutputStream());
             inputStream = new ObjectInputStream(socketCliente.getInputStream());
         	
-            outputStream.writeObject("Bienvenido al chat. Por favor, introduce tu nombre:");
-            nombre = (String) inputStream.readObject();
-            this.gestor.bienvenidaServidor(nombre + " se ha unido al chat.", this);
-
             String mensaje;
+            String[] mensajeArray;
+//            outputStream.writeObject("Bienvenido al chat. Por favor, introduce tu nombre:");
+            mensaje = (String) inputStream.readObject();
+            mensajeArray = mensaje.split("@");
+            mensaje = this.gestor.comprobacionDatosUsuario(mensajeArray[1],mensajeArray[2]);
+            if(mensaje==null) {
+            	this.gestor.enviarMensajeCliente("L@0", this);
+            }else {
+            	nombre = mensajeArray[1];
+            	this.gestor.bienvenidaServidor(nombre + " se ha unido al chat.", this);
+            	System.out.println(mensaje);
+            	this.gestor.enviarMensajeCliente("L@1@"+mensaje, this);
+            }
+            
+
+            
             do {
+            	mensaje = null;
+            	mensajeArray = null;
                 mensaje = (String) inputStream.readObject();
                 if(mensaje.equals("bye")) {
                 	throw new IOException("Cliente se desconecto");
