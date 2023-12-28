@@ -5,30 +5,46 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 public class GestorHundirFlota {
+	//TODO cambiar lista de clientes por hashmap
     public List<ClienteHandler> clientes = new ArrayList<>();
+    public HashMap<String,ClienteHandler> clientesConectados = new HashMap<>();
     //Informacion Registro Base de datos
     private String nameDatabase = "hundirflota";
 	private String user = "root";
 	private String pass = "root";
           
     public synchronized void bienvenidaServidor(String mensaje, ClienteHandler remitente) {
-    	for (ClienteHandler cliente : clientes) {
-            if (cliente != remitente) {
-                cliente.enviarMensaje(mensaje);
-            }
-        }
+    	for(Map.Entry entry: clientesConectados.entrySet()) {
+    		ClienteHandler cliente = (ClienteHandler) entry.getValue();
+    		if(cliente != remitente) {
+    			cliente.enviarMensaje(mensaje);;
+    		}
+    	}
+//    	for (ClienteHandler cliente : clientes) {
+//            if (cliente != remitente) {
+//                cliente.enviarMensaje(mensaje);
+//            }
+//        }
     }
     
     public synchronized void menzajepatos(String mensaje, ClienteHandler remitente) {
-        for (ClienteHandler cliente : clientes) {
-            if (cliente != remitente) {
-                cliente.enviarMensaje(remitente.getNombre() + ": " + mensaje);
-            }
-        }
+    	for(Map.Entry entry: clientesConectados.entrySet()) {
+    		ClienteHandler cliente = (ClienteHandler) entry.getValue();
+    		if(cliente != remitente) {
+    			cliente.enviarMensaje(remitente.getNombre() + ": " + mensaje);
+    		}
+    	}
+//        for (ClienteHandler cliente : clientes) {
+//            if (cliente != remitente) {
+//                cliente.enviarMensaje(remitente.getNombre() + ": " + mensaje);
+//            }
+//        }
     }
     
     public synchronized void desconexionServidor(ClienteHandler remitente) {
@@ -66,5 +82,12 @@ public class GestorHundirFlota {
 			e.printStackTrace();
 		}
     	return null;
+    }
+    
+    public synchronized boolean comprobacionConexionMultiple(String nombreUsuario) {
+    	if(clientesConectados.containsKey(nombreUsuario)) {
+    		return true;
+    	}
+    	return false;
     }
 }

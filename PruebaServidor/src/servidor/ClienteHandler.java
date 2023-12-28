@@ -12,6 +12,8 @@ public class ClienteHandler implements Runnable {
     private ObjectInputStream inputStream;
     private ObjectOutputStream outputStream;
     private GestorHundirFlota gestor;
+    
+    private boolean usuarioDuplicado = false;
 
     public ClienteHandler(Socket socket, GestorHundirFlota gestor) {
         this.socketCliente = socket;
@@ -39,7 +41,6 @@ public class ClienteHandler implements Runnable {
         	
             String mensaje;
             String[] mensajeArray;
-//            outputStream.writeObject("Bienvenido al chat. Por favor, introduce tu nombre:");
             mensaje = (String) inputStream.readObject();
             mensajeArray = mensaje.split("@");
             mensaje = this.gestor.comprobacionDatosUsuario(mensajeArray[1],mensajeArray[2]);
@@ -47,9 +48,15 @@ public class ClienteHandler implements Runnable {
             	this.gestor.enviarMensajeCliente("L@0", this);
             }else {
             	nombre = mensajeArray[1];
-            	this.gestor.bienvenidaServidor(nombre + " se ha unido al chat.", this);
-            	System.out.println(mensaje);
-            	this.gestor.enviarMensajeCliente("L@1@"+mensaje, this);
+            	if(this.gestor.comprobacionConexionMultiple(nombre)==true) {
+            		usuarioDuplicado = true;
+            		this.gestor.enviarMensajeCliente("L@R", this);
+            	}else {
+	            	this.gestor.clientesConectados.put(nombre, this);
+	            	this.gestor.bienvenidaServidor(nombre + " se ha unido al chat.", this);
+	            	System.out.println(mensaje);
+	            	this.gestor.enviarMensajeCliente("L@1@"+mensaje, this);
+            	}
             }
             
 
@@ -64,19 +71,27 @@ public class ClienteHandler implements Runnable {
                 	this.gestor.menzajepatos(mensaje, this);
                 }
             } while (!mensaje.equals("bye"));
-
-    		System.out.println("Cliente desconectado forzosamente");
+            
             this.gestor.menzajepatos(nombre + " ha abandonado el chat.", this);
+            if(this.gestor.clientesConectados.containsKey(nombre)) {
+            	this.gestor.clientesConectados.remove(nombre);
+            }
             this.gestor.clientes.remove(this);
             socketCliente.close();
         } catch (IOException | ClassNotFoundException e) {
         	if(e instanceof SocketException && e.getMessage().equals("Connection reset")) {
         		System.out.println("Cliente desconectado forzosamente");
         		this.gestor.menzajepatos(nombre + " ha abandonado el chat.", this);
+        		if(this.gestor.clientesConectados.containsKey(nombre) && usuarioDuplicado == false) {
+                	this.gestor.clientesConectados.remove(nombre);
+                }
                 this.gestor.clientes.remove(this);
         	} else if(e instanceof IOException && e.getMessage().equals("Cliente se desconecto")) {
         		System.out.println("Cliente se desconecto");
         		this.gestor.desconexionServidor(this);
+        		if(this.gestor.clientesConectados.containsKey(nombre) && usuarioDuplicado == false) {
+                	this.gestor.clientesConectados.remove(nombre);
+                }
                 this.gestor.clientes.remove(this);
         	}else {
                 e.printStackTrace();
