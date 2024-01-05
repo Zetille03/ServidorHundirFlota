@@ -21,7 +21,7 @@ public class Servidor {
             ServerSocket serverSocket = new ServerSocket(PUERTO);
             System.out.println("ServidorGPT1 esperando conexiones en el puerto " + PUERTO);
             GestorHundirFlota gestor = new GestorHundirFlota();
-            
+            gestor.borrarDatosPartidas();
             while (true) {
                 Socket clienteSocket = serverSocket.accept();
                 System.out.println("Cliente conectado desde " + clienteSocket.getInetAddress());
