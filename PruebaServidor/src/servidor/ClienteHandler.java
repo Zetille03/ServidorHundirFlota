@@ -80,19 +80,25 @@ public class ClienteHandler implements Runnable {
 					throw new IOException("Cliente se desconecto");
 				} else {
 					switch (mensajeArray[0]) {
+					//Mensajes relacionados con el inicio de partida
 					case "P":
 						switch(mensajeArray[1]) {
+						//Mensaje de inicio de partida
 						case "N":
 							String hashmapString = this.gestor.clientesEsperandoParaJugar.toString();
 							this.gestor.enviarMensajeCliente("P@H@"+hashmapString, this);
 							this.gestor.clientesEsperandoParaJugar.put(id_usuario, nombreUsuario);
 							break;
+						//Mensaje de eleccion de contrincante
 						case "C":
 							String nombreContrincante = this.gestor.clientesEsperandoParaJugar.get(Integer.parseInt(mensajeArray[2]));
 							int idContrincante = this.gestor.clientesConectadosID.get(nombreContrincante);
-							String idPartida = this.gestor.insertarRowPartida(id_usuario, idContrincante);
+							int idPartida = this.gestor.insertarRowPartida(id_usuario, idContrincante);
 							this.gestor.clientesEsperandoParaJugar.remove(Integer.parseInt(mensajeArray[2]));
 							this.gestor.clientesEsperandoParaJugar.remove(id_usuario);
+							
+							
+							//Elección aleatoria de quien empieza la partida
 							int eleccionContrincante = r.nextInt(2);
 							if(eleccionContrincante==1) {
 								this.gestor.clientesConectadosObjetos.get(nombreContrincante).outputStream.writeObject("P@E@"+nombreUsuario+"@"+idPartida+"@true");
@@ -103,20 +109,26 @@ public class ClienteHandler implements Runnable {
 							}
 							
 							break;
+						//Mensaje de colocación con la posición de los barcos
 						case "CO":
 							String nombreContricante = mensajeArray[2];
 							ArrayList<Barco> arrayBarcos = (ArrayList<Barco>) inputStream.readObject();
+							this.gestor.insercionColocacionBarcos(Integer.valueOf(mensajeArray[3]), id_usuario, Barco.pasarArrayBarcosAString(arrayBarcos));
 							this.gestor.clientesConectadosObjetos.get(nombreContricante).outputStream.writeObject("P@T");
 							this.gestor.clientesConectadosObjetos.get(nombreContricante).outputStream.writeObject(arrayBarcos);
 							break;
 						}
 						break;
+					//Mensajes relacionados con los disparos
 					case "D":
 						switch(mensajeArray[1]) {
+						//Mensaje con la casilla disparada y a quién enviarselo
 						case "D":
 							this.gestor.actualizarDisparo(mensajeArray[3], id_usuario, Integer.parseInt(mensajeArray[2]));
 							this.gestor.clientesConectadosObjetos.get(mensajeArray[4]).outputStream.writeObject("D@R@"+mensajeArray[3]);
 							break;
+						//Mensaje que envia el ganador para notificar al perdedor y cambiar en la base de 
+						//de datos el id del ganador y el estado del booleano "terminado"
 						case "W":
 							this.gestor.insertarGanadorPartida(Integer.parseInt(mensajeArray[3]), id_usuario);
 							this.gestor.clientesConectadosObjetos.get(mensajeArray[2]).outputStream.writeObject("D@P");
@@ -130,43 +142,31 @@ public class ClienteHandler implements Runnable {
 				}
 			} while (!mensaje.equals("bye"));
 
-			this.gestor.menzajepatos(nombreUsuario + " ha abandonado el chat.", this);
-			if (this.gestor.clientesConectadosObjetos.containsKey(nombreUsuario)) {
-				this.gestor.clientesConectadosObjetos.remove(nombreUsuario);
-				this.gestor.clientesConectadosID.remove(nombreUsuario);
-			}
-			if(this.gestor.clientesEsperandoParaJugar.containsKey(id_usuario)) {
-				this.gestor.clientesEsperandoParaJugar.remove(id_usuario);
-			}
-			this.gestor.clientes.remove(this);
+			desconectarCliente();
 			socketCliente.close();
 		} catch (IOException | ClassNotFoundException e) {
 			if (e instanceof SocketException && e.getMessage().equals("Connection reset")) {
 				System.out.println("Cliente desconectado forzosamente");
-				this.gestor.menzajepatos(nombreUsuario + " ha abandonado el chat.", this);
-				if (this.gestor.clientesConectadosObjetos.containsKey(nombreUsuario) && usuarioDuplicado == false) {
-					this.gestor.clientesConectadosObjetos.remove(nombreUsuario);
-					this.gestor.clientesConectadosID.remove(nombreUsuario);
-				}
-				if(this.gestor.clientesEsperandoParaJugar.containsKey(id_usuario)) {
-					this.gestor.clientesEsperandoParaJugar.remove(id_usuario);
-				}
-				this.gestor.clientes.remove(this);
+				desconectarCliente();
 			} else if (e instanceof IOException && e.getMessage().equals("Cliente se desconecto")) {
 				System.out.println("Cliente se desconecto");
-				this.gestor.desconexionServidor(this);
-				if (this.gestor.clientesConectadosObjetos.containsKey(nombreUsuario) && usuarioDuplicado == false) {
-					this.gestor.clientesConectadosObjetos.remove(nombreUsuario);
-					this.gestor.clientesConectadosID.remove(nombreUsuario);
-				}
-				if(this.gestor.clientesEsperandoParaJugar.containsKey(id_usuario)) {
-					this.gestor.clientesEsperandoParaJugar.remove(id_usuario);
-				}
-				this.gestor.clientes.remove(this);
+				desconectarCliente();
 			} else {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public void desconectarCliente() {
+		this.gestor.menzajepatos(nombreUsuario + " ha abandonado el chat.", this);
+		if (this.gestor.clientesConectadosObjetos.containsKey(nombreUsuario)) {
+			this.gestor.clientesConectadosObjetos.remove(nombreUsuario);
+			this.gestor.clientesConectadosID.remove(nombreUsuario);
+		}
+		if(this.gestor.clientesEsperandoParaJugar.containsKey(id_usuario)) {
+			this.gestor.clientesEsperandoParaJugar.remove(id_usuario);
+		}
+		this.gestor.clientes.remove(this);
 	}
 	
 	
