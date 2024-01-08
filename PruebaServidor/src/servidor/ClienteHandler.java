@@ -8,9 +8,9 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Random;
 
-import infocompartida.Barco;
-import infocompartida.Boton;
-import infocompartida.Partida;
+import info.Barco;
+import info.Boton;
+import info.Partida;
 
 public class ClienteHandler implements Runnable {
 	private Socket socketCliente;
@@ -132,8 +132,28 @@ public class ClienteHandler implements Runnable {
 						case "W":
 							this.gestor.insertarGanadorPartida(Integer.parseInt(mensajeArray[3]), id_usuario);
 							this.gestor.clientesConectadosObjetos.get(mensajeArray[2]).outputStream.writeObject("D@P");
+							break;
+						case "RE":
+							this.gestor.clientesConectadosObjetos.get(mensajeArray[2]).outputStream.writeObject("D@RE");
+							this.gestor.insertarGanadorPartida(Integer.parseInt(mensajeArray[3]), this.gestor.clientesConectadosID.get(mensajeArray[2]));
+							break;
 						}
 						
+						break;
+					//Mensajes sobre el replay de partidas terminadas
+					case "R":
+						switch(mensajeArray[1]) {
+						//Eleccion de partida a ver
+						case "L":
+							mensaje = this.gestor.seleccionarPartidasTerminadas();
+							enviarMensaje("R@L@"+mensaje);
+							break;
+						case "P":
+							//Este mensaje tiene 2: disparos, 3:colocacion_barcos1, 4:colocacion_barcos2,5:nombre_jugador1,6:nombremensajeArrJugador2;
+							mensaje = this.gestor.seleccionarPartidaTerminada(Integer.valueOf(mensajeArray[2]));
+							enviarMensaje("R@P@"+mensaje);
+							break;
+						}
 						break;
 					default:
                     	 System.out.println(mensaje);
@@ -158,7 +178,6 @@ public class ClienteHandler implements Runnable {
 	}
 
 	public void desconectarCliente() {
-		this.gestor.menzajepatos(nombreUsuario + " ha abandonado el chat.", this);
 		if (this.gestor.clientesConectadosObjetos.containsKey(nombreUsuario)) {
 			this.gestor.clientesConectadosObjetos.remove(nombreUsuario);
 			this.gestor.clientesConectadosID.remove(nombreUsuario);

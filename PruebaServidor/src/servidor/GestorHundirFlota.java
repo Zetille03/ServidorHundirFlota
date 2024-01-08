@@ -13,7 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import infocompartida.Partida;
+import info.Partida;
 
 public class GestorHundirFlota {
 	// TODO cambiar lista de clientes por hashmap
@@ -29,11 +29,11 @@ public class GestorHundirFlota {
 	// Informacion Registro Base de datos
 	private String nameDatabase = "hundirflota";
 	private String user = "root";
-	private String pass = "root";
+	private String pass = "MANAGER";
 
 	public synchronized void bienvenidaServidor(String mensaje, ClienteHandler remitente) {
-		for (Map.Entry entry : clientesConectadosObjetos.entrySet()) {
-			ClienteHandler cliente = (ClienteHandler) entry.getValue();
+		for (Map.Entry<String,ClienteHandler> entry : clientesConectadosObjetos.entrySet()) {
+			ClienteHandler cliente = entry.getValue();
 			if (cliente != remitente) {
 				cliente.enviarMensaje(mensaje);
 				;
@@ -88,8 +88,9 @@ public class GestorHundirFlota {
 					+ idUsuario1 + "," + idUsuario2 + ",?);");
 			preparedStatement.setObject(1, fechaActual);
 			int filasAfectadas = preparedStatement.executeUpdate();
-			ResultSet resultSet = statement.executeQuery("SELECT id_partida FROM partidas WHERE id_jugador1 = '"
-					+ idUsuario1 + "' AND id_jugador2 = '" + idUsuario2 + " ORDER BY fecha_creacion DESC LIMIT 1';");
+			ResultSet resultSet = statement.executeQuery("SELECT id_partida FROM partidas WHERE (id_jugador1 = "
+					+ idUsuario1 + " AND id_jugador2 = " + idUsuario2 + ") OR (id_jugador1 = "+ idUsuario1 + " AND id_jugador2 = " + idUsuario2 + ")"
+							+ "ORDER BY id_partida DESC LIMIT 1;");
 			if (resultSet.next()) {
 				return resultSet.getInt("id_partida");
 			}
@@ -181,6 +182,87 @@ public class GestorHundirFlota {
 				e.printStackTrace();
 			}
 		}
+	}
+	
+	public synchronized String seleccionarPartidasTerminadas() {
+		String partidas = "";
+		Connection conexion = null;
+		try {
+			conexion = DriverManager.getConnection("jdbc:mysql://localhost:3306/" + nameDatabase, user, pass);
+			Statement statement = conexion.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			ResultSet resultSet = statement.executeQuery("SELECT id_partida,id_jugador1,id_jugador2 FROM partidas WHERE terminada = true;");
+			resultSet.last();
+			int nResultados = resultSet.getRow();
+			if(nResultados!=0) {
+				resultSet.beforeFirst();
+				for(int i = 0;i<nResultados;i++) {
+					if(resultSet.next()) {
+						int id_partida = resultSet.getInt("id_partida");
+						int id_jugador1 = resultSet.getInt("id_jugador1");
+						int id_jugador2 = resultSet.getInt("id_jugador2");
+						partidas+= id_partida+","+id_jugador1+","+id_jugador2;
+						if(i!=nResultados-1) {
+							partidas += ";";
+						}
+					}
+				}
+			}
+			return partidas;
+		} catch (Exception e) {
+			if (e instanceof SQLException) {
+				System.out.println("error base de datos");
+				e.printStackTrace();
+			}
+		}
+		return partidas;
+	}
+	
+	public synchronized String seleccionarPartidaTerminada(int eleccion) {
+		String datosPartida = "";
+		int id_jugador1 = 0;
+		int id_jugador2=0;
+		int id_ganador = 0;
+		String ganador = "";
+		Connection conexion = null;
+		try {
+			conexion = DriverManager.getConnection("jdbc:mysql://localhost:3306/" + nameDatabase, user, pass);
+			Statement statement = conexion.createStatement();
+			ResultSet resultSet =  statement.executeQuery("SELECT id_jugador1,id_jugador2,id_ganador,disparos FROM partidas WHERE id_partida = "+eleccion+";");
+			if(resultSet.next()) {
+				id_jugador1 = resultSet.getInt("id_jugador1");
+				id_jugador2 = resultSet.getInt("id_jugador2");
+				id_ganador = resultSet.getInt("id_ganador");
+				datosPartida+=resultSet.getString("disparos");
+			}
+			resultSet = statement.executeQuery("SELECT colocacion_barcos FROM barcos WHERE id_partida = "+eleccion+" AND id_jugador = "+id_jugador1+";");
+			if(resultSet.next()) {
+				datosPartida+="@"+resultSet.getString("colocacion_barcos");
+			}
+			resultSet = statement.executeQuery("SELECT colocacion_barcos FROM barcos WHERE id_partida = "+eleccion+" AND id_jugador = "+id_jugador2+";");
+			if(resultSet.next()) {
+				datosPartida+="@"+resultSet.getString("colocacion_barcos");
+			}
+			resultSet = statement.executeQuery("SELECT nombre_usuario FROM usuarios WHERE id_usuario = "+id_jugador1+";");
+			if(resultSet.next()) {
+				datosPartida+="@"+resultSet.getString("nombre_usuario");
+			}
+			resultSet = statement.executeQuery("SELECT nombre_usuario FROM usuarios WHERE id_usuario = "+id_jugador2+";");
+			if(resultSet.next()) {
+				datosPartida+="@"+resultSet.getString("nombre_usuario");
+			}
+			resultSet = statement.executeQuery("SELECT nombre_usuario FROM usuarios WHERE id_usuario = "+id_ganador+";");
+			if(resultSet.next()) {
+				 ganador = resultSet.getString("nombre_usuario");
+			}
+			datosPartida+="@"+id_jugador1+"@"+id_jugador2+"@"+eleccion+"@"+ganador;
+			return datosPartida;
+		} catch (Exception e) {
+			if (e instanceof SQLException) {
+				System.out.println("error seleccion de partida terminada");
+				e.printStackTrace();
+			}
+		}
+		return datosPartida;
 	}
 	
 	public synchronized LocalDateTime generarFechaActual() {

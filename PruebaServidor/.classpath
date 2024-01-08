@@ -7,6 +7,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="E:/DAM/2DAM/Acceso_Datos/Tema3/mysql-connector-j-8.2.0/mysql-connector-j-8.2.0.jar"/>
-	<classpathentry kind="lib" path="E:/DAM/2DAM/Programación_servicios/Tema_4/ProyectoInfoCompartida/infocompartida.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/InfoProyecto"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
